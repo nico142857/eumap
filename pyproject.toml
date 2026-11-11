@@ -1,0 +1,43 @@
+[project]
+name = "eumap"
+version = "0.1.0"
+description = "UMAP with its kNN graph built by a Faiss IVF index whose centroids are trained with e-means."
+readme = "README.md"
+authors = [
+    { name = "nico142857", email = "nicolas.toro.llanco@gmail.com" }
+]
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+keywords = ["umap", "faiss", "e-means", "k-means", "nearest-neighbors", "dimensionality-reduction", "embedding"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+]
+# The locked numpy (2.5.4) and scipy (1.18.1) require Python >= 3.12.
+requires-python = ">=3.12"
+dependencies = [
+    "faiss-cpu>=1.16.0",
+    "umap-learn>=0.6.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/nico142857/eumap"
+Repository = "https://github.com/nico142857/eumap"
+Issues = "https://github.com/nico142857/eumap/issues"
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+bench = [
+    "h5py>=3.16.0",
+    "matplotlib>=3.11.2",
+    "pandas>=3.1.1",
+]
+dev = [
+    "pytest>=9.2.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
