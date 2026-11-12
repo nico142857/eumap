@@ -4,8 +4,9 @@ UMAP with its nearest-neighbour graph built by a [Faiss](https://github.com/face
 IVF index whose centroids are trained with
 [e-means](https://e-means.github.io/) (Bessa et al., 2026).
 
-**Status: experimental.** Whether this is faster than stock UMAP is an open question that the
-benchmark in this repository is designed to answer. See [Benchmark](#benchmark) before using it.
+**Status: negative result, not maintained.** In the benchmark in this repository eumap was slower
+than stock UMAP on every dataset, with no gain in embedding quality. The code works and is kept as
+a record of the experiment. See [Results](#results) before using it.
 
 ## What it is, and what it is not
 
@@ -100,11 +101,44 @@ SIFT1M and GloVe-100.
 
 ### Results
 
-The benchmark is running. This section will be replaced by the measured results.
+**eumap is not worth using on CPU.** By the criteria fixed in the protocol beforehand, none of the
+three positive readings holds on any of the four evaluation datasets, and the "not worth using"
+reading holds.
 
-The expectation recorded in the protocol beforehand, from a single probe run, is a marginal or
-negative result on CPU: quantizer training, the part e-means speeds up, is a small share of the
-total, and NN-descent is already fast.
+Medians over three seeds, one exclusive 36-core node per dataset (Xeon E5-2697 v4), umap-learn
+0.6.0 with its new pipeline (`optimizer="adam"`), faiss-cpu 1.16.0:
+
+| Dataset | Points | kNN stage: IVF + e-means vs NN-descent, at equal recall | UMAP end to end | eumap end to end | Slowdown |
+|---|---|---|---|---|---|
+| MNIST | 70,000 | 18.1x slower | 5.3 s | 13.4 s | 2.5x |
+| Fashion-MNIST | 70,000 | 17.7x slower | 4.5 s | 13.0 s | 2.9x |
+| Covertype | 581,012 | 7.2x slower | 43.7 s | 60.1 s | 1.4x |
+| SIFT1M | 1,000,000 | 15.0x slower | 88.7 s | 206.4 s | 2.3x |
+| Synthetic (d = 128) | 1,000,000 | 23.8x slower | 81.2 s | 133.6 s | 1.6x |
+| GloVe-100 (cosine) | 1,183,514 | 8.4x slower | 106.5 s | 547.0 s | 5.1x |
+
+![kNN time against the number of points](results/figures/scaling_knn_time.png)
+
+- **The IVF graph never beats NN-descent.** At the recall NN-descent reaches, every IVF variant
+  was slower on all ten dataset sizes, and the gap does not close as the data grows: on the
+  synthetic sweep there is no crossover up to 1,000,000 points.
+- **e-means trains faster, and it does not matter.** From about 580,000 points up, e-means trained
+  the centroids in 0.69 to 0.79 of the time of Faiss' default k-means (0.28 to 0.33 with two
+  epochs). At 70,000 points it was about 3 times slower. Either way the search over the lists
+  dominates the IVF cost, so eumap with e-means ran within 5% of eumap with ordinary k-means on
+  the four large datasets, and about 1.5 times slower on the two small ones.
+- **Embedding quality is the same**, within the protocol's tolerance, on five of the six datasets.
+  On GloVe-100 trustworthiness was 2.2% lower (0.810 against 0.829). The layout built from the
+  exact neighbour graph scores about the same (0.804), so this is not caused by IVF errors.
+- **GloVe-100 is the worst case.** NN-descent stops at recall 0.66 there, while eumap's default
+  target of 0.95 needed 256 probes, which is where the 5x comes from.
+
+Not tested: UMAP's optional RINND neighbour backend (new in 0.6, and not installed for these
+runs), GPU indexes, and datasets above 1.2 million points.
+
+Full tables, per-dataset verdict lines and figures are in
+[`results/RESULTS.md`](results/RESULTS.md); the raw records are in `results/raw/` (node names
+replaced by labels) and `results/summary.csv`.
 
 ### Running it
 
